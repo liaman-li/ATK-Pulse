@@ -3,6 +3,8 @@
 **ATK / VXE / VGN 离线鼠标电量与电压监测工具（V0.8.6 · 鸢尾温室 UI）**
 **作者**：[Liebe Kiana (@liaman-li)](https://github.com/liaman-li/ATK-Pulse)
 
+[![CI](https://github.com/liaman-li/ATK-Pulse/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/liaman-li/ATK-Pulse/actions/workflows/ci.yml?query=branch%3Amain)
+
 > **永久免费开源，谨防倒卖。**  
 > 本软件遵循 `GNU GPL-3.0-or-later` 协议开源，**100% 本地离线运行**——无联网请求、无云端遥测、不收集或上传任何序列号、用户名或主机路径信息。
 

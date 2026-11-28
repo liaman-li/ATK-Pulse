@@ -44,6 +44,8 @@
 
 ## 隔离验收
 
+[GitHub Actions CI](.github/workflows/ci.yml) 在 `windows-latest` 运行隔离验收并校验 `hardware_access: false`。合入 `main` 的 PR 必须通过 GitHub Actions 的 `Windows isolated acceptance` 检查。
+
 从仓库根目录执行，给每轮验收使用独立输出目录。重定向 `LOCALAPPDATA` 可同时隔离旧版历史路径。运行器会设置 `ATK_BATTERY_DATA_DIR`，并生成逐项 JSON 与日志。
 
 ```powershell
