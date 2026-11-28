@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Windows isolated acceptance
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            .github/workflows/ci.yml
+
+      - name: Install acceptance dependencies
+        run: |
+          # The tests import QtCore, QtGui and QtWidgets from Essentials.
+          python -m pip install PySide6-Essentials==6.12.0 hidapi==0.15.0
+
+      - name: Run and verify isolated acceptance
+        id: acceptance
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PYTHONUTF8: '1'
+          ACCEPTANCE_DIR: ${{ runner.temp }}/atk-pulse-acceptance-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          $env:LOCALAPPDATA = Join-Path $env:ACCEPTANCE_DIR 'localappdata'
+          $env:ATK_BATTERY_DATA_DIR = Join-Path $env:ACCEPTANCE_DIR 'isolated-runtime'
+          $env:QT_QPA_FONTDIR = Join-Path $env:WINDIR 'Fonts'
+
+          python tests/run_acceptance.py --output $env:ACCEPTANCE_DIR
+          if ($LASTEXITCODE -ne 0) {
+            throw "Acceptance exited with code $LASTEXITCODE."
+          }
+
+          $summaryPath = Join-Path $env:ACCEPTANCE_DIR 'software-tests.json'
+          $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($summary.hardware_access -isnot [bool] -or $summary.hardware_access) {
+            throw 'Acceptance must report hardware_access=false.'
+          }
+          if ($summary.successful -ne $true -or $summary.tests -lt 1 -or
+              $summary.failures -ne 0 -or $summary.errors -ne 0) {
+            throw 'The acceptance report must contain a successful test run with no failures or errors.'
+          }
+          $passed = $summary.tests - $summary.skipped
+          Write-Host "Verified $passed/$($summary.tests) acceptance tests passed; hardware_access=false."
+
+      - name: Upload failed acceptance logs
+        if: failure() && steps.acceptance.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: acceptance-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/atk-pulse-acceptance-${{ github.run_id }}-${{ github.run_attempt }}/software-tests.log
+            ${{ runner.temp }}/atk-pulse-acceptance-${{ github.run_id }}-${{ github.run_attempt }}/software-tests.json
+          retention-days: 7
